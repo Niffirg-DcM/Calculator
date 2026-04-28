@@ -22,7 +22,7 @@ int main(int argc, const char * argv[]) {
             q = false;
             break;
         }
-        calc->setOp(hold1);
+        calc->setOp(hold1);  
         std::cout<<"number 1: ";
         std::cin>>hold;
         calc->setParam1(hold);

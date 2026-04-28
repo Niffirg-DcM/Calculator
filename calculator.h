@@ -10,6 +10,13 @@ struct operation {
     
     int operand;
     double output;
+    
+    operation(double p1, double p2, int op, double out) {
+        param1 = p1;
+        param2 = p2;
+        operand = op;
+        output = out;
+    }
 };
 
 
