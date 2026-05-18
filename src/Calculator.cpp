@@ -1,12 +1,12 @@
 //
-//  calculator.cpp
+//  Calculator.cpp
 //  calc
 //
 //  Created by Griffin McDonald on 2026-04-26.
 //
 #include <vector>
 #include <iostream>
-#include "calculator.h"
+#include "Calculator.hpp"
 
 
 void Calculator::reset() {
