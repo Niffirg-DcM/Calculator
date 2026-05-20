@@ -12,12 +12,15 @@
 
 //Converts raw string into RPN queue
 std::queue<Token> Parser::parseToPostfix(const std::string& expression) {
-    int ind1 =0;
     std::queue<Token> rpn = std::queue<Token>();
-    std::vector<Token> tokenize();
+    std::vector<Token> tokens = tokenize(expression);
+
+    for (Token t : tokens) {
+        rpn.push(t);
+    }
 
 
-    return std::queue<Token>(); 
+    return rpn; 
 }
 
 //Breaks string into individual units (numbers, ops, parens)
