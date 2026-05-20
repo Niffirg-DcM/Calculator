@@ -15,6 +15,7 @@
 
 void Calculator::calculate(const std::string& input){
     std::queue<Token> rpn = parser.parseToPostfix(input);
+    std::cout<<rpn.size()<<std::endl;
     double currentResult = evaluator.evaluate(rpn);
     displayResult(currentResult);
     lastResult = currentResult;

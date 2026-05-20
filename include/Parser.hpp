@@ -20,7 +20,8 @@ public:
 
 private:
     std::vector<Token> tokenize(const std::string& expression);
-    bool isOperator(char c);
+    int isOperator(char c);
+    int isParen(char c);
     bool isFunction(const std::string& s);
 };
 
