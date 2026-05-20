@@ -7,7 +7,7 @@
 
 #include <iostream>
 #include <string>
-#include "include/Calculator.hpp"
+#include "../include/Calculator.hpp"
 
 int main() {
     Calculator calc;

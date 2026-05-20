@@ -6,93 +6,25 @@
 //
 #include <vector>
 #include <iostream>
-#include "Calculator.hpp"
+#include "../include/Calculator.hpp"
+
+// Parser parser;
+// Evaluator evaluator;
+// double lastResult = 0.0;
 
 
-void Calculator::reset() {
-    param1=0;
-    param2=0;
-    operand = 0;
-    output = 0;
+void Calculator::calculate(const std::string& input){
+    std::queue<Token> rpn = parser.parseToPostfix(input);
+    double currentResult = evaluator.evaluate(rpn);
+    displayResult(currentResult);
+    lastResult = currentResult;
+}
+    
+void Calculator::displayResult(double result) const {
+    std::cout << result << std::endl;
     return;
 }
 
-bool Calculator::call() {
-    switch(operand) {
-        case 1: {
-            add();
-            break;
-        }
-        case 2: {
-            sub();
-            break;
-        }
-        case 3: {
-            mul();
-            break;
-        }
-        case 4: {
-            div();
-            break;
-        }
-        case 5: {
-            pow();
-            break;
-        }
-        default:
-            reset();
-            return false;
-            
-    }
-    std::cout<<output<<std::endl;
-    history.push_back(operation(param1,param2,operand,output));
-    reset();
-    return true;
-    
+void Calculator::handleError(const std::string& message) const {
+    return;
 }
-
-void Calculator::add() {
-    output=param1+param2;
-}
-
-void Calculator::sub() {
-    output=param1-param2;
-}
-
-void Calculator::mul() {
-    output= param1*param2;
-}
-
-void Calculator::div() {
-    output= param1/param2;
-}
-
-void Calculator::pow() {
-    output=1;
-    for (int i =0;i<param2;i++) output*=param1;
-}
-
-double Calculator::getOp() {
-    return operand;
-}
-
-double Calculator::getParam1() {
-    return param1;
-}
-
-double Calculator::getParam2() {
-    return param2;
-}
-
-void Calculator::setOp(int i) {
-    operand = i;
-}
-
-void Calculator::setParam1(double x) {
-    param1 = x;
-}
-
-void Calculator::setParam2(double y) {
-    param2 = y;
-}
-

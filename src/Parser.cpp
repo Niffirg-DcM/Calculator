@@ -14,7 +14,7 @@
 std::queue<Token> Parser::parseToPostfix(const std::string& expression) {
     int ind1 =0;
     std::queue<Token> rpn = std::queue<Token>();
-
+    std::vector<Token> tokenize();
 
 
     return std::queue<Token>(); 
@@ -26,11 +26,12 @@ std::vector<Token> Parser::tokenize(const std::string& expression) {
     std::vector<std::string> hold;
     std::stringstream ss(expression);
     std::string segment;
-    Token curr;
+
     //TODO: Loop through string and identify TokenTypes
     while (ss >> segment) {
         hold.push_back(segment);
     }
+
     for (int i =0;i<hold.size();i++){
         Token t;
         if (hold[i].size() ==1) {

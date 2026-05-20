@@ -10,8 +10,8 @@ public:
     double evaluate(std::queue<Token> postfixQueue);
 
 private:
-    void applyOperator(std::stack<double>& values, const std::string& op);
-    void applyFunction(std::stack<double>& values, const std::string& func);
+    void applyOperator(std::stack<Token>& values, const std::string& op);
+    void applyFunction(std::stack<Token>& values, const std::string& func);
 };
 
 #endif
