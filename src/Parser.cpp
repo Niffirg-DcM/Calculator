@@ -52,76 +52,71 @@ std::queue<Token> Parser::parseToPostfix(const std::string& expression) {
 
 //Breaks string into individual units (numbers, ops, parens)
 std::vector<Token> Parser::tokenize(const std::string& expression) {
-    //Trash Code...
-    // std::vector<Token> tokens;
-    // std::vector<std::string> hold;
-    // std::stringstream ss(expression);
-    // std::string segment;
-
-    // while (ss >> segment) {
-    //     hold.push_back(segment);
-    // }
-
-    // for (int i =0;i<hold.size();i++){
-    //     Token t;
-    //     int op;
-    //     if (hold[i].size() ==1) {
-    //         op = isOperator(hold[i][0]);
-    //         if (op!=0) {
-    //             t.type = TokenType::Operator;
-    //             t.symbol = hold[i];
-    //             t.precedence = op;
-    //         } else {
-    //             t.type = TokenType::Number;
-    //             t.value = std::strtod(hold[i].c_str(), nullptr);
-    //         }
-    //     } else {
-    //         op = isFunction(hold[i]);
-    //         if (op!=0) {
-    //             t.type = TokenType::Function;
-    //             t.symbol = hold[i];
-    //         } else {
-    //             t.type = TokenType::Number;
-    //             t.value = std::strtod(hold[i].c_str(), nullptr);
-    //         }
-    //     }
-    //     tokens.push_back(t);
-    // }
 
     std::vector<Token> tokens;
 
     /*
-    Index from start
-    maintain first separately and use current index.
-    when no longer digit make it an int and pass it to tokens.
-    when switches from non int to int, pass it to tokens
+    while loop
+    skip whitespace
+    check for nums
+    check for operators
+    check for parenth
+    check for funcs
+    base case for unknown chars
     */
-   int last =0;
-   std::regex e("^[-+]?[0-9]*\\.?[0-9]+$");
+   int i = 0;
+   int n = expression.length();
 
-    for (int i = 1; i < expressions.length(); i++) {
-        Token t;
-        //if substring expressions at i is digit and substring from last to i-1 isnt digit, turn last:i-1 into token of paren/op/func type
-        //if substring expressions at i isn't digit and substring from last to i-1 is digit, turn last:i-1 into token of number type
-        if (std::regex_match(expressions.substring(last, i-last-1)),e) {
-            if (std::regex_match(expressions.substring(last, i-last)),e) {
-                continue;
-            } else {
-                t.value = double(expressions.substring(last, i-1-last));
-                t.type = TokenType::Number;
-            }
-        } else {
-            if (std::regex_match(expressions.substring(i, 1)),e) {
-                std::string hold = expressions.substring(last, i-1-last);
-                t.type = TokenType::operation;
-
-            } else {
-                continue;
-            }
+    while(i<n) {
+        char c = expression[i];
+        if (std::isspace(c)) {
+            i++;
+            continue;
         }
+
+        if (std::isdigit(c) || c=='.') {
+            int start = i;
+            bool has_dec = false;
+
+            while (i<n && (std::isdigit(expression[i]) || expression[i]=='.')) {
+                if (expression[i]=='.') {
+                    if (has_dec) break;
+                    has_dec = true;
+                }
+                i++
+            }
+            Token t;
+            t.type = TokenType::Number;
+            t.value = std::stod(expression.substr(start,i-start));
+            tokens.push_back(t);
+        }
+
+        else if (isOperator(c)>0) {
+            Token t;
+            t.type == TokenType::Operator;
+            t.symbol = c;
+            tokens.push_back(t);
+        }
+        else if (isFunction(c)>0) {
+            Token t;
+            t.type == TokenType::Function;
+            t.symbol = c;
+            tokens.push_back(t);
+        }
+        else if ((int v = isParen(c))>0) {
+            Token t;    
+            if (v==1) {
+                t.type == TokenType::LeftParen;
+            } else {
+                t.type == TokenType::RightParen;
+            }
+            t.symbol = c;
+            tokens.push_back(t);
+        } else {
+            
+        }
+
     }
-
-
     return tokens;
 }
 
