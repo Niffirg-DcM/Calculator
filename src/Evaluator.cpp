@@ -17,8 +17,6 @@ double Evaluator::evaluate(std::queue<Token> postfixQueue) {
     while (!postfixQueue.empty()) {
         active.push(postfixQueue.front());
         result = postfixQueue.front();
-        std::cout<<result.value<<std::endl;
-        std::cout<<result.symbol<<std::endl;
         postfixQueue.pop();
         if (active.size() > 2) {
             if(active.top().type == TokenType::Operator) {

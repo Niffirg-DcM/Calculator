@@ -64,8 +64,10 @@ std::vector<Token> Parser::tokenize(const std::string& expression) {
     check for funcs
     base case for unknown chars
     */
+
    int i = 0;
    int n = expression.length();
+   int v;
 
     while(i<n) {
         char c = expression[i];
@@ -83,37 +85,41 @@ std::vector<Token> Parser::tokenize(const std::string& expression) {
                     if (has_dec) break;
                     has_dec = true;
                 }
-                i++
+                i++;
             }
             Token t;
             t.type = TokenType::Number;
             t.value = std::stod(expression.substr(start,i-start));
             tokens.push_back(t);
-        }
-
-        else if (isOperator(c)>0) {
+        } else if (isOperator(c)>0) {
             Token t;
-            t.type == TokenType::Operator;
-            t.symbol = c;
+            t.type = TokenType::Operator;
+            t.symbol = std::string(1, c);;
             tokens.push_back(t);
-        }
-        else if (isFunction(c)>0) {
-            Token t;
-            t.type == TokenType::Function;
-            t.symbol = c;
-            tokens.push_back(t);
-        }
-        else if ((int v = isParen(c))>0) {
+            i++;
+        } else if ((v = isParen(c))>0) {
             Token t;    
             if (v==1) {
-                t.type == TokenType::LeftParen;
+                t.type = TokenType::LeftParen;
             } else {
-                t.type == TokenType::RightParen;
+                t.type = TokenType::RightParen;
             }
             t.symbol = c;
             tokens.push_back(t);
+            i++;
+        } else if (std::isalpha(c)) {
+            int start = i;
+            while (i < n && std::isalpha(expression[i])) {
+                i++;
+            }
+
+            Token t;
+            t.type = TokenType::Function;
+            t.symbol = expression.substr(start, i - start);
+            tokens.push_back(t);
         } else {
-            
+            std::cout<<"no idea what this is means"<<std::endl;
+            i++;
         }
 
     }
