@@ -9,49 +9,69 @@
 #include <iostream>
 
 //assuming valid RPN input
+//evaluate postfixqueue for result
 double Evaluator::evaluate(std::queue<Token> postfixQueue) {
-    Token result;
-    std::stack<Token> active = std::stack<Token>();
+    double result;
+    std::stack<double> active = std::stack<double>();
     std::string op;
+    Token curr;
 
+    //while there are values in the queue, parse through them.
     while (!postfixQueue.empty()) {
-        active.push(postfixQueue.front());
-        result = postfixQueue.front();
+        curr = postfixQueue.front();
         postfixQueue.pop();
-        if (active.size() > 2) {
-            if(active.top().type == TokenType::Operator) {
-                op = active.top().symbol;
-                active.pop();
-                applyOperator(active,op);
+
+        //add numbers immediately
+        if (curr.type == TokenType::Number) {
+            active.push(curr.value);
+            //if there is an operator check if there are enough values to apply it or not. then apply op to last two values and append to result
+        } else if (curr.type == TokenType::Operator) {
+            if (active.size() < 2) {
+                std::cerr<<"not enough active stack members for operation"<<std::endl;
+                return 0.0;
             }
+            double rightVal = active.top();
+            active.pop();
+            double leftVal = active.top();
+            active.pop();
+            result = applyOperator(leftVal,rightVal,curr.symbol);
+            active.push(result);
+            //if there is function, make sure there are enough values to apply it or not, then apply it and append to result
+        } else if (curr.type == TokenType::Function) {
+            if (active.empty()) {
+                std::cerr<<"not enough active stack members for function"<<std::endl;
+                return 0.0;
+            }
+            double inputVal = active.top();
+            active.pop();
+            result = applyFunction(inputVal,curr.symbol);
+            active.push(result);
+
         }
     }
-    result = active.top();
+    if (active.empty()) return 0.0;
 
-    return result.value;
+    return active.top();
 }
 
-void Evaluator::applyOperator(std::stack<Token>& values, const std::string& op) {
-    Token value;
-    double rightVal = values.top().value;
-    values.pop();
-    double leftVal = values.top().value;
-    values.pop();
-    value.type = TokenType::Number;
+//Helper to apply opperators
+double Evaluator::applyOperator(double leftVal, double rightVal,const std::string& op) {    
     if(op=="+") {
-        value.value = leftVal + rightVal;
+        return leftVal + rightVal;
     } else if (op =="-") {
-       value.value = leftVal - rightVal;
+       return leftVal - rightVal;
     } else if (op =="*") {
-        value.value = leftVal * rightVal;
+        return leftVal * rightVal;
     } else if (op =="/") {
-        value.value = leftVal / rightVal;
-    } else if (op =="^") {
-        value.value = std::pow(leftVal,rightVal);
+        return leftVal / rightVal;
+    } else {
+        return std::pow(leftVal,rightVal);
     }
-    values.push(value);
 }
-void Evaluator::applyFunction(std::stack<Token>& values, const std::string& func) {
+
+//Helper to apply functions
+double Evaluator::applyFunction(double inputVal, const std::string& func) {
+    return 0;
 
 }
 

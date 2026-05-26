@@ -9,6 +9,7 @@
 #include <string>
 #include "../include/Calculator.hpp"
 
+//main function to launch calculator
 int main() {
     Calculator calc;
     std::string input;
