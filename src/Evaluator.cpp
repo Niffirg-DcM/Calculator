@@ -71,6 +71,19 @@ double Evaluator::applyOperator(double leftVal, double rightVal,const std::strin
 
 //Helper to apply functions
 double Evaluator::applyFunction(double inputVal, const std::string& func) {
+    if (func=="log") {
+        return std::log(inputVal);
+    } else if (func=="sin") {
+        return std::sin(inputVal);
+    } else if (func=="cos") {
+        return std::cos(inputVal);
+    } else if (func=="tan") {
+        return std::tan(inputVal);
+    } else if (func=="sqrt") {
+        return std::sqrt(inputVal);
+    }else if (func=="sqr") {
+        return std::pow(inputVal,2);
+    }
     return 0;
 
 }

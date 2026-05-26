@@ -180,6 +180,6 @@ int Parser::isParen(char c) {
 
 //Helper to check if a string is a math function
 bool Parser::isFunction(const std::string& s) {
-    if (s =="sin"||s=="log"||s=="cos"||s=="sininv"||s=="cosinv") return true;
+    if (s =="sin"||s=="log"||s=="cos"||s=="tan"||s=="sqrt"||s=="sqr") return true;
     return false;
 }
