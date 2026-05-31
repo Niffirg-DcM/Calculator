@@ -16,7 +16,7 @@ private:
     Evaluator evaluator;
     double lastResult = 0.0;
     
-    void displayResult(double result) const;
+    void displayResult(const std::string& message, double result) const;
     void handleError(const std::string& message) const;
 };
 

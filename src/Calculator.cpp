@@ -7,6 +7,7 @@
 #include <vector>
 #include <iostream>
 #include "../include/Calculator.hpp"
+#include "../include/LogSB.hpp"
 
 // Parser parser;
 // Evaluator evaluator;
@@ -16,13 +17,14 @@
 void Calculator::calculate(const std::string& input){
     std::queue<Token> rpn = parser.parseToPostfix(input);
     double currentResult = evaluator.evaluate(rpn);
-    displayResult(currentResult);
+    displayResult(input, currentResult);
     lastResult = currentResult;
 }
     
 //Helper to display results
-void Calculator::displayResult(double result) const {
+void Calculator::displayResult(const std::string& input, double result) const {
     std::cout << result << std::endl;
+    LogSB::logToSupabase(input, result);
     return;
 }
 

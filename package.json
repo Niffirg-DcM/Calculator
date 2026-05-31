@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "build": "mkdir -p bin && clang++ -std=c++17 src/*.cpp -I./include -I/opt/homebrew/include -L/opt/homebrew/lib -lcpr -lcurl -o bin/app",
+    "start": "npm run build && npx env-cmd ./bin/app",
+    "clean": "rm -rf bin"
+  },
+  "devDependencies": {
+    "env-cmd": "^11.0.0"
+  }
+}
