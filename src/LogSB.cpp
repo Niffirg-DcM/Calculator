@@ -8,7 +8,10 @@
 #include <iostream>
 #include <format>
 #include <sstream>
-#include <curl/curl.h>
+#include <cpr/cpr.h>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 std::string escapeJSONString(const std::string& input) {
     std::ostringstream ss;
@@ -52,8 +55,9 @@ void LogSB::logToSupabase(const std::string& expression, double final_result){
     std::string supabase_url(env_url);
     std::string anon_key(env_key);
 
-    std::string json_payload = 
-        "{\"expression\": \"" + escapeJSONString(expression) + "\", " + "\"result\": \"" + escapeJSONNumber(final_result) + "\"}";
+    json json_payload = 
+    {{"expression",escapeJSONString(expression)},
+        {"result", escapeJSONNumber(final_result)}};
 
     CURL* curl = curl_easy_init();
     if (!curl) {
@@ -61,41 +65,23 @@ void LogSB::logToSupabase(const std::string& expression, double final_result){
         return;
     }
 
-    struct curl_slist* headers = nullptr;
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-    headers = curl_slist_append(headers, ("apikey: " + anon_key).c_str());
-    headers = curl_slist_append(headers, ("Authorization: Bearer " + anon_key).c_str());
-    headers = curl_slist_append(headers, "Prefer: return=minimal");
+    cpr::Response r = cpr::Post(
+        cpr::Url{supabase_url},
+        cpr::Header{
+            {"apikey", anon_key},                               
+            {"Authorization", "Bearer " + anon_key},           
+            {"Content-Type", "application/json"},                   
+            {"Prefer", "return=minimal"}                            
+        },
+        cpr::Body{json_payload.dump()}                                     
+    );
 
-    //Set the target Supabase URL
-    curl_easy_setopt(curl, CURLOPT_URL, supabase_url.c_str());
 
-    //Pass the headers list to the request
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-
-    //Pass the payload string (equivalent to cpr::Body and implicitly sets method to POST)
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload.c_str());
-
-    //Execute the request synchronously
-    CURLcode res = curl_easy_perform(curl);
-
-    //Check for network/protocol layer errors
-    if (res != CURLE_OK) {
-        std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
+    if (r.status_code == 201) { 
+        std::cout << "Successfully inserted row!" << std::endl;
     } else {
-        //Retrieve the HTTP response status code (e.g., 201 for success)
-        long response_code;
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-        
-        if (response_code == 201) {
-            std::cout << "Successfully posted payload to Supabase!" << std::endl;
-        } else {
-            std::cerr << "Supabase API returned error status: " << response_code << std::endl;
-        }
+        std::cerr << "Insert failed. Status code: " << r.status_code << '\n'
+                  << "Supabase Error: " << r.text << std::endl;
     }
-
-    //Free the allocated linked list memory and clean up the session handle
-    curl_slist_free_all(headers);
-    curl_easy_cleanup(curl);
 }
 

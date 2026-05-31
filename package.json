@@ -1,10 +1,14 @@
 {
+  "name": "calc",
+  "version": "1.0.0",
+  "description": "A C++ scientific calculator with Supabase telemetry",
   "scripts": {
-    "build": "mkdir -p bin && clang++ -std=c++17 src/*.cpp -I./include -I/opt/homebrew/include -L/opt/homebrew/lib -lcpr -lcurl -o bin/app",
-    "start": "npm run build && npx env-cmd ./bin/app",
-    "clean": "rm -rf bin"
+    "configure": "cmake -S . -B build",
+    "build": "npm run configure && cmake --build build",
+    "start": "npm run build && npx env-cmd ./build/app",
+    "clean": "rm -rf build bin"
   },
   "devDependencies": {
-    "env-cmd": "^11.0.0"
+    "env-cmd": "^10.1.0"
   }
 }
