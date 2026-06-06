@@ -10,5 +10,8 @@
   },
   "devDependencies": {
     "env-cmd": "^10.1.0"
+  },
+  "dependencies": {
+    "boost": "^0.63.1"
   }
 }

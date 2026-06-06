@@ -1,0 +1,15 @@
+[package]
+name = "Calculator"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["staticlib", "cdylib"]
+path = "src/lib.rs"
+
+[dependencies]
+reqwest = { version = "0.13", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+dotenvy = "0.15"
+env = "1.0.1"

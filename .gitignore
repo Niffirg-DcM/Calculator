@@ -40,3 +40,8 @@ yarn-error.log*
 bin/
 out/
 lib/
+
+# Added by cargo
+
+/target
+.env
