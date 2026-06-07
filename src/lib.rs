@@ -47,44 +47,44 @@ struct outParts {
     text: String,
 }
 
-//unsafe operation so tag. ensure async process runs before returning
+// unsafe operation so tag. ensure async process runs before returning
 #[unsafe(no_mangle)]
 pub extern "C" fn return_to_main(raw_input: *const c_char) -> *mut c_char {
+    //create a runtime so we can run async code fully before returning.
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .unwrap();
 
-    //Block the calling FFI thread until the async function completes
+    //CALL MCP SERVER FOR CONTEXT TO PROVIDE TO LLM HERE
+    let mcp_context = String::from("this");
+    // Block the calling FFI thread until the async function completes
     rt.block_on(async {
+        //loop over LLM->MCP->LLM until non-tool response.
+        loop {
+            // calling api with extra params
+            let result = api_call(raw_input, mcp_context).await;
+            let string_res = match result {
+                Ok(s) => s,
+                Err(e) => e.to_string(),
+            };
 
-        let result = api_call(raw_input).await;
+            //if not making a tool request, return the response/error
+            if string_res.get(0..4) != Some("tool") {
+                let c_string = CString::new(string_res).unwrap();
+                return c_string.into_raw();
+            }
 
-        let to_be_returned = match result {
+            //ship off tool request to mcp for it to handle and gather resulting data
+            let new_input = mcp_handler(string_res);
 
-            Ok(s) => {
-                {
-            let c_string = CString::new(s).unwrap();
-            
-            c_string.into_raw()
         }
-            },
-
-            Err(e) => {
-                let c_string = CString::new(e.to_string()).unwrap();
-            
-                c_string.into_raw()
-            },
-        };
-
-        return to_be_returned;
-    
     })
-
 }
 
+
 //async func for making api call
-async fn api_call(raw_input: *const c_char) -> Result<String,Box<dyn std::error::Error>> {
+async fn api_call(raw_input: *const c_char, mcp_context:String) -> Result<String,Box<dyn std::error::Error>> {
     //ensure .env file exists
     dotenv().expect(".env file not found");
 
@@ -103,9 +103,6 @@ async fn api_call(raw_input: *const c_char) -> Result<String,Box<dyn std::error:
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
         .build()?;
-
-
-
 
 
     let url = format!("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={}",key);

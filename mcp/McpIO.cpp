@@ -16,16 +16,10 @@ extern "C" {
 }
 //main handler for GeminiAPI requests.
 std::string McpIO::handleRequest(std::string& input){
-    //send input string to API throught Rust handler.
-    //when it returns check for tool handlings
-    //if needs to use exposed endpoint, handle and make query.
-    //return to API
-    //if it needs more tool handlings, loop. else return string response.
- 
-    //for now just pass through to rust and back to main as proof of concept.
-
+    //conver input to c_str so rust can handle it.
     const char* to_send = input.c_str();
 
+    //call rust FFI function for MCP server and LLM items. handle memory
     char* ret_val = return_to_main(to_send);
     if (ret_val != nullptr) {
         std::string response(ret_val);
