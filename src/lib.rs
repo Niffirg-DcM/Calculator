@@ -1,6 +1,7 @@
-use reqwest::Response;
+use reqwest::{Error, Response};
 use serde::{Deserialize, Serialize};
 use std::fs::read_to_string;
+use std::ptr::null_mut;
 use std::time::Duration;
 use std::io;
 use dotenvy::dotenv;
@@ -56,13 +57,30 @@ pub extern "C" fn return_to_main(raw_input: *const c_char) -> *mut c_char {
 
     //Block the calling FFI thread until the async function completes
     rt.block_on(async {
-        return api_call(raw_input).await;
+
+        let result = api_call(raw_input).await;
+
+        let to_be_returned = match result {
+
+            Ok(s) => {
+                {
+            let c_string = CString::new(s).unwrap();
+            
+            c_string.into_raw()
+        }
+            },
+
+            Err(e) => {
+                let c_string = CString::new(e.to_string()).unwrap();
+            
+                c_string.into_raw()
+            },
+        };
+
+        return to_be_returned;
+    
     })
 
-    /*let to_be_returned = match CString::new(parsed_response.candidates[0].content.parts[0].text) {
-            Ok(s) => s,
-            Err(_) => return std::ptr::null_mut(),
-        }; */
 }
 
 //async func for making api call
@@ -73,31 +91,22 @@ async fn api_call(raw_input: *const c_char) -> Result<String,Box<dyn std::error:
 
     //convert constant c char pointer into string to send in request.
     let c_str = unsafe {CStr::from_ptr(raw_input)};
-    let data_to_send = match c_str.to_str() {
-        Ok(s) => s,
-        Err(_) => "Error",
-    };
+    let data_to_send = c_str.to_str()?;
 
-    //handle null case
-    if data_to_send.eq("Error") {
-        std::ptr::null_mut();
-    }
 
     //ensure api key is there
-    let key = match env::var("GEMINI_API_KEY") {
-        Ok(val) => val,
-        Err(e) => String::from("Error"),
-    };
+    let key = env::var("GEMINI_API_KEY")?;
 
-    if key.eq("Error") {
-        std::ptr::null_mut();
-    }
 
 
     //instantiate client request
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
-        .build();
+        .build()?;
+
+
+
+
 
     let url = format!("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={}",key);
 
@@ -122,12 +131,9 @@ async fn api_call(raw_input: *const c_char) -> Result<String,Box<dyn std::error:
     if post_response.status().is_success() {
         let parsed_response: GeminiResponse = post_response.json().await?;
 
-        Ok(parsed_response);
-
-
-        
+        Ok(parsed_response.candidates[0].content.parts[0].text.clone())     
     } else {
-        
+        Err("error".into())
     }
 
     

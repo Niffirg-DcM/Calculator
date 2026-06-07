@@ -54,21 +54,22 @@ target_link_libraries(app PRIVATE nlohmann_json::nlohmann_json cpr::cpr)
 # 7. Link Rust & OS System Libraries
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     # Link the Rust static library
-    target_link_libraries(app PRIVATE "${RUST_LIB_DIR}/rust_api_shipper.lib")
+    target_link_libraries(app PRIVATE "${RUST_LIB_DIR}/libCalculator.lib")
     # Windows system dependencies for Rust and Tokio network/crypto
     target_link_libraries(app PRIVATE ws2_32 userenv bcrypt)
 
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     # Link the Rust static library
-    target_link_libraries(app PRIVATE "${RUST_LIB_DIR}/librust_api_shipper.a")
+    target_link_libraries(app PRIVATE "${RUST_LIB_DIR}/libCalculator.a")
     # macOS system frameworks for networking/security
     find_library(SECURITY_FRAMEWORK Security)
     find_library(COREFOUNDATION_FRAMEWORK CoreFoundation)
-    target_link_libraries(app PRIVATE ${SECURITY_FRAMEWORK} ${COREFOUNDATION_FRAMEWORK} pthread dl m)
+    find_library(SYSTEM_CONFIGURATION_FRAMEWORK SystemConfiguration)
+    target_link_libraries(app PRIVATE ${SECURITY_FRAMEWORK} ${COREFOUNDATION_FRAMEWORK} ${SYSTEM_CONFIGURATION_FRAMEWORK} pthread dl m)
 
 else() # Linux
     # Link the Rust static library
-    target_link_libraries(app PRIVATE "${RUST_LIB_DIR}/librust_api_shipper.a")
+    target_link_libraries(app PRIVATE "${RUST_LIB_DIR}/libCalculator.a")
     # Linux system dependencies for threading and math
     target_link_libraries(app PRIVATE pthread dl m)
 endif()
