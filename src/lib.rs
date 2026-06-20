@@ -1,5 +1,6 @@
 use reqwest::{Error, Response};
 use serde::{Deserialize, Serialize};
+use serde_json::from_str;
 use std::time::Duration;
 use dotenvy::dotenv;
 use std::ffi::{CStr, CString};
@@ -11,40 +12,75 @@ use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader};
 
 //incoming payloads with deserialize
 #[derive(Deserialize, Debug)]
-struct inCandidates {
-    content: inContents,
+struct InCandidates {
+    content: InContents,
 }
 
+
 #[derive(Deserialize, Debug)]
-struct inContents {
-    parts: Vec<inParts>,
+struct InContents {
+    parts: Vec<InParts>,
     role: String,
 }
 
 #[derive(Deserialize, Debug)]
-struct inParts {
+struct InParts {
     text: String,
 }
 
 #[derive(Deserialize, Debug)]
 struct GeminiResponse {
-    candidates: Vec<inCandidates>,
+    candidates: Vec<InCandidates>,
 }
 
 //outgoing payloads with serialize
 #[derive(Serialize)]
-struct outCandidates {
-    contents: Vec<outContents>,
+struct OutCandidates {
+    contents: Vec<OutContents>,
+    tools: RootTools,
 }
 
 #[derive(Serialize)]
-struct outContents {
-    parts: Vec<outParts>,
+struct OutContents {
+    parts: Vec<OutParts>,
 }
 
 #[derive(Serialize)]
-struct outParts {
+struct OutParts {
     text: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct RootTools {
+    tools: Vec<OutTools>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct OutTools {
+    functionDeclaractions: Vec<OutDeclarations>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct OutDeclarations {
+    name: String,
+    description: String,
+    parameters: OutParams,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct OutParams {
+    r#type: String,
+    properties: OutProps
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct OutProps {
+    location: OutLocation,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct OutLocation {
+    r#type: String,
 }
 
 // unsafe operation so tag. ensure async process runs before returning
@@ -70,22 +106,28 @@ pub extern "C" fn return_to_main(raw_input: *const c_char) -> *mut c_char {
         .spawn()
         .expect("failed to spawn child process");
 
+
         //grab input stream to send data.
         let mut sin = child.stdin.take().expect("Failed to open stdin");
+
 
         //output stream
         let sout = child.stdout.take().expect("failed to open stdout");
 
+
         //BufReader for safety
         let mut out_reader = BufReader::new(sout);
-        let mut in_reader = BufReader::new(io::stdin());
+        //let mut in_reader = BufReader::new(io::stdin());
+
 
         //CALL MCP SERVER FOR CONTEXT TO PROVIDE TO LLM HERE
         let mut mcp_context = String::new();
 
+
         //reading initial output of MCP server, should be tools.
         out_reader.read_line(&mut mcp_context).await.expect("failed to read data from mcp server");
-
+        
+        //prepping input to api_call
         let mut to_input = raw_input.clone();
 
         //loop over LLM->MCP->LLM until non-tool response.
@@ -135,7 +177,6 @@ async fn api_call(raw_input: *const c_char, mcp_context:String) -> Result<String
     let key = env::var("GEMINI_API_KEY")?;
 
 
-
     //instantiate client request
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
@@ -144,13 +185,17 @@ async fn api_call(raw_input: *const c_char, mcp_context:String) -> Result<String
 
     let url = format!("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={}",key);
 
+    //unpacking mcp string response into RootTools struct.
+    let parsed_data: RootTools = serde_json::from_str(&mcp_context).unwrap();
+
     //create payload to send
-    let payload = outCandidates {
-        contents: vec![ outContents {
-            parts: vec![ outParts {
+    let payload = OutCandidates {
+        contents: vec![ OutContents {
+            parts: vec![ OutParts {
                 text: String::from(data_to_send)}
                 ]
-            } ]
+            } ],
+        tools: parsed_data
     };
 
     //send post and get response
