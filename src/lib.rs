@@ -4,8 +4,8 @@ use std::time::Duration;
 use dotenvy::dotenv;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
-use std::process::{Command,Stdio};
-use std::process;
+use tokio::process::Command;
+use std::process::Stdio;
 use std::io::{Write};
 use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader};
 
@@ -31,7 +31,6 @@ struct GeminiResponse {
     candidates: Vec<inCandidates>,
 }
 
-
 //outgoing payloads with serialize
 #[derive(Serialize)]
 struct outCandidates {
@@ -51,6 +50,7 @@ struct outParts {
 // unsafe operation so tag. ensure async process runs before returning
 #[unsafe(no_mangle)]
 pub extern "C" fn return_to_main(raw_input: *const c_char) -> *mut c_char {
+
     //create a runtime so we can run async code fully before returning.
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -60,30 +60,38 @@ pub extern "C" fn return_to_main(raw_input: *const c_char) -> *mut c_char {
     //instantiate child MCP server 
     let child_path = "./SupabaseMCPServer/src/main.rs";
 
-    //creating running process from binaries (allows inouts and to grab outputs)
-    let mut child  = Command::new(child_path)
-    .arg("open")
-    .stdout(process::Stdio::piped())
-    .stdin(process::Stdio::piped())
-    .spawn()
-    .expect("failed to spawn child process");
 
-
-    // Block the calling FFI thread until the async function completes
     rt.block_on(async {
-        //grab input stream to send data.
-        let mut stdin = child.stdin.take().expect("Failed to open stdin");
+        //creating running process from binaries (allows inouts and to grab outputs)
+        let mut child  = Command::new(child_path)
+        .arg("open")
+        .stdout(Stdio::piped())
+        .stdin(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn child process");
 
-        let stout = child.stdout.take().expect("failed to open stdout");
-        let mut out_reader = BufReader::new(stout);
+        //grab input stream to send data.
+        let mut sin = child.stdin.take().expect("Failed to open stdin");
+
+        //output stream
+        let sout = child.stdout.take().expect("failed to open stdout");
+
+        //BufReader for safety
+        let mut out_reader = BufReader::new(sout);
         let mut in_reader = BufReader::new(io::stdin());
 
-    //CALL MCP SERVER FOR CONTEXT TO PROVIDE TO LLM HERE
-    let mcp_context = String::from_utf8(output.stdout).unwrap();
+        //CALL MCP SERVER FOR CONTEXT TO PROVIDE TO LLM HERE
+        let mut mcp_context = String::new();
+
+        //reading initial output of MCP server, should be tools.
+        out_reader.read_line(&mut mcp_context).await.expect("failed to read data from mcp server");
+
+        let mut to_input = raw_input.clone();
+
         //loop over LLM->MCP->LLM until non-tool response.
         loop {
             // calling api with extra params
-            let result = api_call(raw_input, mcp_context.clone()).await;
+            let result = api_call(to_input, mcp_context.clone()).await;
             let string_res = match result {
                 Ok(s) => s,
                 Err(e) => e.to_string(),
@@ -96,9 +104,16 @@ pub extern "C" fn return_to_main(raw_input: *const c_char) -> *mut c_char {
             }
 
             //ship off tool request to mcp for it to handle and gather resulting data
-            stdin.write_all(string_res.as_bytes()).expect("test");
+            sin.write_all(string_res.as_bytes());
 
-            let next_input = child.wait_with_output().expect("failed to read stdout after tool req");
+            //mutable string to handle input
+            let mut buf_input = String::new(); 
+
+            //grab output from MCP server
+            out_reader.read_line(&mut buf_input).await.expect("failed to read data from mcp server");
+            //converting string to *const i8 for api call.
+            to_input = CString::new(buf_input).expect("String contained null bytes").as_ptr();
+
 
         }
     })
@@ -155,8 +170,6 @@ async fn api_call(raw_input: *const c_char, mcp_context:String) -> Result<String
         Err("error".into())
     }
 
-    
-    
 }
 
 //handle memory logic for cpp.
@@ -169,4 +182,3 @@ pub extern "C" fn free_rust_string(s: *mut c_char) {
         let _ = CString::from_raw(s);
     }
 }
-
