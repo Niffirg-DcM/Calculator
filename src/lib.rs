@@ -12,6 +12,11 @@ use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader};
 
 //incoming payloads with deserialize
 #[derive(Deserialize, Debug)]
+struct GeminiResponse {
+    candidates: Vec<InCandidates>,
+}
+
+#[derive(Deserialize, Debug)]
 struct InCandidates {
     content: InContents,
 }
@@ -26,11 +31,6 @@ struct InContents {
 #[derive(Deserialize, Debug)]
 struct InParts {
     text: String,
-}
-
-#[derive(Deserialize, Debug)]
-struct GeminiResponse {
-    candidates: Vec<InCandidates>,
 }
 
 //outgoing payloads with serialize
@@ -93,14 +93,16 @@ pub extern "C" fn return_to_main(raw_input: *const c_char) -> *mut c_char {
         .build()
         .unwrap();
 
-    //instantiate child MCP server 
-    let child_path = "./SupabaseMCPServer/src/main.rs";
-
+    let child_path = env::var("PATH_TO_SERVER_CARGO_TOML").expect("failed");
+    //instantiate child MCP server
 
     rt.block_on(async {
         //creating running process from binaries (allows inouts and to grab outputs)
-        let mut child  = Command::new(child_path)
-        .arg("open")
+        let mut child  = Command::new("cargo")
+        .arg("run")
+        // Point exactly to the Cargo.toml file of the other project
+        .arg("--manifest-path")
+        .arg(child_path)
         .stdout(Stdio::piped())
         .stdin(Stdio::piped())
         .spawn()
@@ -126,9 +128,12 @@ pub extern "C" fn return_to_main(raw_input: *const c_char) -> *mut c_char {
 
         //reading initial output of MCP server, should be tools.
         out_reader.read_line(&mut mcp_context).await.expect("failed to read data from mcp server");
+
+        println!("{}",mcp_context);
         
         //prepping input to api_call
         let mut to_input = raw_input.clone();
+
 
         //loop over LLM->MCP->LLM until non-tool response.
         loop {
@@ -186,7 +191,7 @@ async fn api_call(raw_input: *const c_char, mcp_context:String) -> Result<String
     let url = format!("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={}",key);
 
     //unpacking mcp string response into RootTools struct.
-    let parsed_data: RootTools = serde_json::from_str(&mcp_context).unwrap();
+    let parsed_data: RootTools = serde_json::from_str(&mcp_context)?;
 
     //create payload to send
     let payload = OutCandidates {
