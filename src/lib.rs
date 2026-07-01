@@ -1,6 +1,7 @@
 use reqwest::{Error, Response};
 use serde::{Deserialize, Serialize};
 use serde_json::from_str;
+use serde_json::Value;
 use std::time::Duration;
 use dotenvy::dotenv;
 use std::ffi::{CStr, CString};
@@ -21,23 +22,33 @@ struct InCandidates {
     content: InContents,
 }
 
-
 #[derive(Deserialize, Debug)]
 struct InContents {
-    parts: Vec<InParts>,
-    role: String,
+    parts: Vec<InParts>
 }
 
 #[derive(Deserialize, Debug)]
 struct InParts {
-    text: String,
+    text: Option<String>,
+
+    #[serde(rename = "functionCall", alias = "function_call")]
+    function_call: Option<inFunctionCall>
 }
+
+
+#[derive(Serialize, Deserialize, Debug)]
+struct inFunctionCall {
+    name: String,
+    args: Value
+}
+
+
 
 //outgoing payloads with serialize
 #[derive(Serialize)]
 struct OutCandidates {
     contents: Vec<OutContents>,
-    tools: RootTools,
+    tools: Vec<OutTools>,
 }
 
 #[derive(Serialize)]
@@ -51,13 +62,9 @@ struct OutParts {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct RootTools {
-    tools: Vec<OutTools>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 struct OutTools {
-    functionDeclaractions: Vec<OutDeclarations>,
+    #[serde(rename = "functionDeclarations", alias = "function_declarations")]
+    function_declarations: Vec<OutDeclarations>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -191,7 +198,7 @@ async fn api_call(raw_input: *const c_char, mcp_context:String) -> Result<String
     let url = format!("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={}",key);
 
     //unpacking mcp string response into RootTools struct.
-    let parsed_data: RootTools = serde_json::from_str(&mcp_context)?;
+    let parsed_data: Vec<OutTools> = serde_json::from_str(&mcp_context)?;
 
     //create payload to send
     let payload = OutCandidates {
@@ -213,11 +220,30 @@ async fn api_call(raw_input: *const c_char, mcp_context:String) -> Result<String
 
     //if successful post then parse response to send back to main
     if post_response.status().is_success() {
-        let parsed_response: GeminiResponse = post_response.json().await?;
 
-        Ok(parsed_response.candidates[0].content.parts[0].text.clone())     
+        //parse Json response
+        let parsed_response: GeminiResponse = post_response.json().await?;
+        //decompose into InParts reference so we can check type.
+        let part = &parsed_response.candidates[0].content.parts[0];
+
+        //if part is of functionCall type, then we can treat it as such and send it back
+        if let Some(tool_call) = &part.function_call {
+            let tool_request_json = serde_json::to_string(tool_call).unwrap();
+            Ok(tool_request_json)
+        //if part is of text type, then we can treat it as such and send it back
+        } else if let Some(text_response) = &part.text {
+            //println!("The model said: {}", text_response);
+            Ok(text_response.to_string())
+        //if part is anything else, there is a problem so we error.
+        } else {
+            println!("Received an empty or unrecognizable part.");
+            Err("no response".into())
+
+        }
     } else {
-        Err("error".into())
+        let error_body = post_response.text().await?;
+        println!("Gemini API Error: {}", error_body);
+        Err(error_body.into())
     }
 
 }
